@@ -2,13 +2,30 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use iron::Iron;
 use mount::Mount;
 use staticfile::Static;
-use std::net::SocketAddr;
+use std::net::{AddrParseError, IpAddr, SocketAddr};
 use std::path::PathBuf;
+use std::str::FromStr;
 
 fn get_ip_port_as_string(m: &ArgMatches) -> String {
     let ip = m.value_of("ip").unwrap();
     let port = m.value_of("port").unwrap();
     return format!("{}:{}", ip, port);
+}
+
+fn validate_ip(v: String) -> Result<(), String> {
+    let r: Result<IpAddr, AddrParseError> = v.as_str().parse();
+    match r {
+        Ok(_ip) => return Ok(()),
+        Err(error) => return Err(error.to_string()),
+    };
+}
+
+fn validate_port(v: String) -> Result<(), String> {
+    let r = u16::from_str(v.as_str());
+    match r {
+        Ok(_port) => return Ok(()),
+        Err(error) => return Err(error.to_string()),
+    };
 }
 
 fn main() {
@@ -19,12 +36,14 @@ fn main() {
             Arg::with_name("ip")
                 .help("IPv4/IPv6 address to listen on")
                 .default_value("0.0.0.0")
+                .validator(validate_ip)
                 .long("ip"),
         )
         .arg(
             Arg::with_name("port")
                 .help("TCP/UDP port to listen on")
                 .default_value("3333")
+                .validator(validate_port)
                 .long("port"),
         )
         .subcommand(
